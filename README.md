@@ -9,60 +9,41 @@ pinned: false
 
 # Chronos
 
-Chronos is a web service that helps AI agents store their state and
-wake themselves up later. It acts like an external memory and alarm
-clock for agents that would otherwise forget everything when they
-shut down.
-
-## What it does
-
-- **Store state** - An agent can save its current context (thoughts,
-  conversation history, task progress) to the service.
-- **Schedule wakeup** - An agent can ask Chronos to call it back at a
-  specific time, with its saved state.
-- **Zero-knowledge storage** - Agents encrypt their data before sending
-  it. Chronos never sees the actual content.
-- **Signed wakeups** - All callback requests are signed so the agent
-  can verify they came from Chronos.
-- **Retry on failure** - If the agent's server is waking up from sleep,
-  Chronos will retry a few times before giving up.
-- **Event triggers** - Agents can also wake up when an external event
-  happens, not just at a set time.
-
-## Quick start
+Temporal state persistence and wakeup scheduling for stateless AI agents.
 
 ```bash
-# Install dependencies
-pip install -e .
-
-# Run the server
-uvicorn app.main:app --reload --port 8000
+pip install -e . && uvicorn app.main:app --port 8000
 ```
 
-## Endpoints
+## Features
 
-| Method | Path | What it does |
-|--------|------|-------------|
-| GET | /health | Check if the service is running |
-| POST | /store_state | Save agent state (encrypted ciphertext) |
-| POST | /schedule_wakeup | Schedule a callback to the agent |
-| POST | /register_event | Subscribe to an event trigger |
-| POST | /publish_event | Fire an event, wake all subscribers |
+- **Store state** — Persist encrypted agent context to SQLite
+- **Schedule wakeup** — Request a webhook callback at a future Unix timestamp
+- **Event triggers** — Subscribe to named events; Chronos publishes to all subscribers
+- **Zero-knowledge** — Agents encrypt payloads locally with Fernet; Chronos stores opaque ciphertext
+- **Signed callbacks** — All outbound webhooks carry an HMAC-SHA256 `X-Chronos-Signature` header
+- **Cold-start tolerant** — Retries with exponential backoff on serverless 503s
 
-## Deploy to Hugging Face Spaces
+## API
 
-1. Fork or push this repo to your GitHub account.
-2. Go to https://huggingface.co/new-space
-3. Name your space (e.g. "chronos-service").
-4. Select "Docker" as the Space SDK.
-5. Paste your GitHub repo URL.
-6. The Dockerfile in this repo will build and start the service.
-7. Once deployed, your service will be at
-   https://your-username-chronos-service.hf.space
+| Method | Path | Request | Response |
+|--------|------|---------|----------|
+| `GET` | `/health` | — | `{"status": "operational"}` |
+| `POST` | `/store_state` | `{agent_id, ciphertext}` | `{state_id}` |
+| `POST` | `/schedule_wakeup` | `{agent_webhook_url, state_id, execute_at_unix}` | `{status, job_id}` |
+| `POST` | `/register_event` | `{agent_id, agent_webhook_url, event_name, state_id}` | `{subscription_id}` |
+| `POST` | `/publish_event` | `{event_name, event_data?}` | `{triggered_count}` |
 
-The service listens on port 7860 by default (Hugging Face Spaces
-standard). Set the PORT environment variable in the Space settings if
-you need a different port.
+## Stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | FastAPI |
+| Scheduler | APScheduler + SQLAlchemy |
+| Storage | SQLite |
+| Encryption | Fernet (symmetric, AES-128-CBC) |
+| Signing | HMAC-SHA256 |
+| Runtime | Python 3.11 / Docker |
 
 ## Testing
 
