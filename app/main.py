@@ -18,7 +18,7 @@ async def health():
 
 @app.post("/store_state", response_model=StoreStateResponse)
 async def store_state(request: StoreStateRequest):
-    state_id = storage.store(request.agent_id, request.context_payload)
+    state_id = storage.store(request.agent_id, request.ciphertext)
     return StoreStateResponse(state_id=state_id)
 
 

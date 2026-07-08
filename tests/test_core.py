@@ -8,7 +8,7 @@ from app import storage
 @pytest.fixture(autouse=True, scope="session")
 def setup_test_db():
     old_path = storage.get_db_path()
-    storage.set_db_path("test_chronos.db")
+    storage.set_db_path("test_zks.db")
     yield
     storage.set_db_path(old_path)
 
@@ -28,7 +28,10 @@ async def test_store_state():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/store_state",
-            json={"agent_id": "agent-1", "context_payload": {"step": 1}},
+            json={
+                "agent_id": "agent-1",
+                "ciphertext": "encrypted-data-here",
+            },
         )
     assert response.status_code == 200
     data = response.json()
@@ -42,13 +45,16 @@ async def test_store_state_then_retrieve():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         store_resp = await client.post(
             "/store_state",
-            json={"agent_id": "agent-1", "context_payload": {"step": 1}},
+            json={
+                "agent_id": "agent-1",
+                "ciphertext": "encrypted-data-here",
+            },
         )
         state_id = store_resp.json()["state_id"]
         record = storage.get(state_id)
     assert record is not None
     assert record["agent_id"] == "agent-1"
-    assert record["context_payload"] == {"step": 1}
+    assert record["ciphertext"] == "encrypted-data-here"
 
 
 @pytest.mark.asyncio
@@ -57,7 +63,10 @@ async def test_schedule_wakeup():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         store_resp = await client.post(
             "/store_state",
-            json={"agent_id": "agent-1", "context_payload": {"step": 1}},
+            json={
+                "agent_id": "agent-1",
+                "ciphertext": "encrypted-data-here",
+            },
         )
         state_id = store_resp.json()["state_id"]
 

@@ -47,7 +47,7 @@ def _send_webhook(agent_webhook_url: str, state_id: str) -> None:
 
     payload = {
         "state_id": state_id,
-        "context_payload": record["context_payload"],
+        "ciphertext": record["ciphertext"],
     }
 
     signature = sign_payload(payload, settings.signing_secret)
