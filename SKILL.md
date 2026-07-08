@@ -5,7 +5,7 @@ Use this service to save your context, set a timer, or wait for an event.
 
 ## Base URL
 
-Replace this with your deployed URL before submitting.
+https://amitthecoder-chronos-service.hf.space
 
 ## Endpoints
 
