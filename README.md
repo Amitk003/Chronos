@@ -1,3 +1,12 @@
+---
+title: Chronos
+emoji: 🕐
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Chronos
 
 Chronos is a web service that helps AI agents store their state and
