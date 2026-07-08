@@ -4,12 +4,18 @@ from datetime import datetime, timezone
 
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 from app import storage
+from app.crypto import sign_payload
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-_scheduler = BackgroundScheduler()
+jobstores = {
+    "default": SQLAlchemyJobStore(url="sqlite:///chronos_jobs.sqlite"),
+}
+_scheduler = BackgroundScheduler(jobstores=jobstores)
 _scheduler.start()
 
 
@@ -44,9 +50,28 @@ def _send_webhook(agent_webhook_url: str, state_id: str) -> None:
         "context_payload": record["context_payload"],
     }
 
+    signature = sign_payload(payload, settings.signing_secret)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Chronos-Signature": signature,
+    }
+
+    transport = httpx.HTTPTransport(retries=3)
     try:
-        response = httpx.post(agent_webhook_url, json=payload, timeout=10)
-        response.raise_for_status()
-        logger.info("Webhook sent to %s for state %s", agent_webhook_url, state_id)
+        with httpx.Client(transport=transport, timeout=15) as client:
+            response = client.post(
+                agent_webhook_url, json=payload, headers=headers
+            )
+            response.raise_for_status()
+            logger.info(
+                "Webhook sent to %s for state %s",
+                agent_webhook_url,
+                state_id,
+            )
+            storage.delete(state_id)
     except httpx.HTTPError as e:
-        logger.error("Webhook failed for %s: %s", agent_webhook_url, e)
+        logger.error(
+            "Webhook failed for %s after retries: %s",
+            agent_webhook_url,
+            e,
+        )

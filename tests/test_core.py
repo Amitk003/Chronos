@@ -5,10 +5,12 @@ from app.main import app
 from app import storage
 
 
-@pytest.fixture(autouse=True)
-def clear_storage():
-    storage._store.clear()
+@pytest.fixture(autouse=True, scope="session")
+def setup_test_db():
+    old_path = storage.get_db_path()
+    storage.set_db_path("test_chronos.db")
     yield
+    storage.set_db_path(old_path)
 
 
 @pytest.mark.asyncio
