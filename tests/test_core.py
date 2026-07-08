@@ -25,8 +25,11 @@ def setup_test_env():
 
     scheduler.shutdown()
     storage.set_db_path(old_db_path)
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
+    try:
+        if os.path.exists(TEST_DB):
+            os.remove(TEST_DB)
+    except PermissionError:
+        pass
 
 
 @pytest.mark.asyncio
