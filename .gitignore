@@ -9,6 +9,7 @@ venv/
 env/
 *.db
 *.sqlite3
+*.sqlite
 .env
 .DS_Store
 .pytest_cache/
