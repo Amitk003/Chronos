@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.git/
+.gitignore
+.pytest_cache/
+.mypy_cache/
+.pyright/
+LOGS.md
+*.db
+*.sqlite
+.DS_Store

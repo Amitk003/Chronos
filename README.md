@@ -37,6 +37,23 @@ uvicorn app.main:app --reload --port 8000
 | GET | /health | Check if the service is running |
 | POST | /store_state | Save agent state (encrypted ciphertext) |
 | POST | /schedule_wakeup | Schedule a callback to the agent |
+| POST | /register_event | Subscribe to an event trigger |
+| POST | /publish_event | Fire an event, wake all subscribers |
+
+## Deploy to Hugging Face Spaces
+
+1. Fork or push this repo to your GitHub account.
+2. Go to https://huggingface.co/new-space
+3. Name your space (e.g. "chronos-service").
+4. Select "Docker" as the Space SDK.
+5. Paste your GitHub repo URL.
+6. The Dockerfile in this repo will build and start the service.
+7. Once deployed, your service will be at
+   https://your-username-chronos-service.hf.space
+
+The service listens on port 7860 by default (Hugging Face Spaces
+standard). Set the PORT environment variable in the Space settings if
+you need a different port.
 
 ## Testing
 
