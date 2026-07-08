@@ -1,6 +1,7 @@
 import uuid
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -12,11 +13,29 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-jobstores = {
-    "default": SQLAlchemyJobStore(url="sqlite:///chronos_jobs.sqlite"),
-}
-_scheduler = BackgroundScheduler(jobstores=jobstores)
-_scheduler.start()
+_scheduler: Optional[BackgroundScheduler] = None
+
+
+def start(jobs_db_url: Optional[str] = None) -> None:
+    global _scheduler
+    if _scheduler is not None:
+        _scheduler.shutdown(wait=False)
+
+    url = jobs_db_url if jobs_db_url is not None else settings.jobs_db_url
+    jobstores = {
+        "default": SQLAlchemyJobStore(url=url),
+    }
+    _scheduler = BackgroundScheduler(jobstores=jobstores)
+    _scheduler.start()
+    logger.info("Scheduler started with job store: %s", url)
+
+
+def shutdown() -> None:
+    global _scheduler
+    if _scheduler is not None:
+        _scheduler.shutdown(wait=False)
+        _scheduler = None
+        logger.info("Scheduler shut down")
 
 
 def schedule_wakeup(
@@ -24,6 +43,11 @@ def schedule_wakeup(
     state_id: str,
     execute_at_unix: int,
 ) -> str:
+    if _scheduler is None:
+        raise RuntimeError(
+            "Scheduler not started. Call scheduler.start() first."
+        )
+
     job_id = str(uuid.uuid4())
     run_date = datetime.fromtimestamp(execute_at_unix, tz=timezone.utc)
 

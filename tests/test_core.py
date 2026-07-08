@@ -1,16 +1,32 @@
+import os
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app import storage
+from app import storage, scheduler
+
+TEST_DB = "test_chronos.db"
 
 
 @pytest.fixture(autouse=True, scope="session")
-def setup_test_db():
-    old_path = storage.get_db_path()
-    storage.set_db_path("test_zks.db")
+def setup_test_env():
+    # Clean up any leftover db files
+    for f in [TEST_DB, "chronos.db", "chronos_jobs.sqlite"]:
+        if os.path.exists(f):
+            os.remove(f)
+
+    old_db_path = storage.get_db_path()
+    storage.set_db_path(TEST_DB)
+
+    scheduler.start("sqlite://")
+
     yield
-    storage.set_db_path(old_path)
+
+    scheduler.shutdown()
+    storage.set_db_path(old_db_path)
+    if os.path.exists(TEST_DB):
+        os.remove(TEST_DB)
 
 
 @pytest.mark.asyncio

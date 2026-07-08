@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 
 from app.models import (
@@ -8,7 +10,15 @@ from app.models import (
 )
 from app import storage, scheduler
 
-app = FastAPI(title="Chronos")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title="Chronos", lifespan=lifespan)
 
 
 @app.get("/health")
