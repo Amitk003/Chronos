@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class StoreStateRequest(BaseModel):
     agent_id: str
-    context_payload: dict
+    ciphertext: str
 
 
 class StoreStateResponse(BaseModel):

@@ -1,16 +1,32 @@
+import os
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app import storage
+from app import storage, scheduler
+
+TEST_DB = "test_chronos.db"
 
 
 @pytest.fixture(autouse=True, scope="session")
-def setup_test_db():
-    old_path = storage.get_db_path()
-    storage.set_db_path("test_chronos.db")
+def setup_test_env():
+    # Clean up any leftover db files
+    for f in [TEST_DB, "chronos.db", "chronos_jobs.sqlite"]:
+        if os.path.exists(f):
+            os.remove(f)
+
+    old_db_path = storage.get_db_path()
+    storage.set_db_path(TEST_DB)
+
+    scheduler.start("sqlite://")
+
     yield
-    storage.set_db_path(old_path)
+
+    scheduler.shutdown()
+    storage.set_db_path(old_db_path)
+    if os.path.exists(TEST_DB):
+        os.remove(TEST_DB)
 
 
 @pytest.mark.asyncio
@@ -28,7 +44,10 @@ async def test_store_state():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/store_state",
-            json={"agent_id": "agent-1", "context_payload": {"step": 1}},
+            json={
+                "agent_id": "agent-1",
+                "ciphertext": "encrypted-data-here",
+            },
         )
     assert response.status_code == 200
     data = response.json()
@@ -42,13 +61,16 @@ async def test_store_state_then_retrieve():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         store_resp = await client.post(
             "/store_state",
-            json={"agent_id": "agent-1", "context_payload": {"step": 1}},
+            json={
+                "agent_id": "agent-1",
+                "ciphertext": "encrypted-data-here",
+            },
         )
         state_id = store_resp.json()["state_id"]
         record = storage.get(state_id)
     assert record is not None
     assert record["agent_id"] == "agent-1"
-    assert record["context_payload"] == {"step": 1}
+    assert record["ciphertext"] == "encrypted-data-here"
 
 
 @pytest.mark.asyncio
@@ -57,7 +79,10 @@ async def test_schedule_wakeup():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         store_resp = await client.post(
             "/store_state",
-            json={"agent_id": "agent-1", "context_payload": {"step": 1}},
+            json={
+                "agent_id": "agent-1",
+                "ciphertext": "encrypted-data-here",
+            },
         )
         state_id = store_resp.json()["state_id"]
 

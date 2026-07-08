@@ -23,7 +23,7 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS states (
                 state_id TEXT PRIMARY KEY,
                 agent_id TEXT,
-                context_payload TEXT,
+                ciphertext TEXT,
                 created_at REAL
             )
         """)
@@ -33,13 +33,12 @@ def init_db() -> None:
 init_db()
 
 
-def store(agent_id: str, context_payload: dict[str, Any]) -> str:
+def store(agent_id: str, ciphertext: str) -> str:
     state_id = str(uuid.uuid4())
-    payload_str = json.dumps(context_payload)
     with sqlite3.connect(DB_FILE) as conn:
         conn.execute(
-            "INSERT INTO states (state_id, agent_id, context_payload, created_at) VALUES (?, ?, ?, ?)",
-            (state_id, agent_id, payload_str, time.time()),
+            "INSERT INTO states (state_id, agent_id, ciphertext, created_at) VALUES (?, ?, ?, ?)",
+            (state_id, agent_id, ciphertext, time.time()),
         )
         conn.commit()
     return state_id
@@ -48,7 +47,7 @@ def store(agent_id: str, context_payload: dict[str, Any]) -> str:
 def get(state_id: str) -> dict[str, Any] | None:
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.execute(
-            "SELECT agent_id, context_payload, created_at FROM states WHERE state_id = ?",
+            "SELECT agent_id, ciphertext, created_at FROM states WHERE state_id = ?",
             (state_id,),
         )
         row = cursor.fetchone()
@@ -56,7 +55,7 @@ def get(state_id: str) -> dict[str, Any] | None:
         return None
     return {
         "agent_id": row[0],
-        "context_payload": json.loads(row[1]),
+        "ciphertext": row[1],
         "created_at": row[2],
     }
 
